@@ -1,6 +1,7 @@
 import { START, END, StateSchema, MessagesValue, StateGraph, ReducedValue } from "@langchain/langgraph";
 import type { GraphNode } from "@langchain/langgraph"
 import { HumanMessage } from "@langchain/core/messages"
+import { createAgent, providerStrategy } from "langchain";
 import * as z from "zod"
 import { groqModel, cohereModel, googleModel } from "./model.service.js";
 
@@ -41,10 +42,48 @@ const solutionNode: GraphNode<typeof State> = async(state : typeof State) => {
 
 }
 
+const judgeNode: GraphNode<typeof State> = async(state : typeof State) => {
+
+    const { solution_1, solution_2 } = state;
+
+    const judge = createAgent({
+        model : googleModel,
+        tools : [],
+        responseFormat : providerStrategy(z.object({
+            solution_1 : z.number().min(0).max(10),
+            solution_2 : z.number().min(0).max(10)
+        }))
+    })
+
+    const judgeResponse = await judge.invoke({
+         messages: [
+            new HumanMessage(`
+                You are an impartial AI Judge.
+                Problem: ${state.messages[0].text}
+                Solution 1: ${solution_1}
+                Solution 2: ${solution_2}
+
+                Evaluate correctness, relevance, completeness, and clarity.
+                Score each solution from 0 to 10.
+                Return only the structured scores.
+            `),
+        ],
+    })
+
+    const result = judgeResponse.structuredResponse
+
+    return {
+        judge_recommend: result
+    }
+
+}
+
 const graph = new StateGraph(State)
         .addNode("solution", solutionNode)
+        .addNode("judge", judgeNode)
         .addEdge(START, "solution")
-        .addEdge("solution", END)
+        .addEdge("solution", "judge")
+        .addEdge("judge", END)
         .compile()
 
 

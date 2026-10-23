@@ -4,7 +4,7 @@ import { ChatGroq } from "@langchain/groq";
 import config from "../config/config.js";
 
 export const googleModel = new ChatGoogle({
-    model : "gemini-2.5-flash",
+    model : "gemini-flash-latest",
     apiKey : config.GEMINI_API_KEY
 })
 
