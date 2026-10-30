@@ -8,7 +8,7 @@ const State = new StateSchema({
     problem : z.string().default(""),
     solution_1 : z.string().default(""),
     solution_2 : z.string().default(""),
-    judge_response : z.object({
+    judge : z.object({
         solution_1_score : z.number().default(0),
         solution_2_score : z.number().default(0),
         solution_1_feedback : z.string().default(""),
@@ -34,7 +34,7 @@ const judgeNode:GraphNode<typeof State> = async(state) => {
 
     const { problem, solution_1, solution_2 } = state
 
-    const judgeAgent = createAgent({
+    const judge = createAgent({
         model : googleModel,
         tools : [],
         responseFormat : providerStrategy(z.object({
@@ -47,7 +47,7 @@ const judgeNode:GraphNode<typeof State> = async(state) => {
         Please provide a score out of 10 for each solution, along with your reasoning for the scores.`
     })
 
-    const judge = await judgeAgent.invoke({
+    const judgeResponse = await judge.invoke({
         messages : [
             new HumanMessage(
                 `
@@ -60,11 +60,11 @@ const judgeNode:GraphNode<typeof State> = async(state) => {
         ]
     })
 
-    const { solution_1_score, solution_2_score, solution_1_feedback, solution_2_feedback } = judge.structuredResponse
+    const { solution_1_score, solution_2_score, solution_1_feedback, solution_2_feedback } = judgeResponse.structuredResponse
 
     return {
         
-        judge_response : {
+        judge : {
             solution_1_score,
             solution_2_score,
             solution_1_feedback,
